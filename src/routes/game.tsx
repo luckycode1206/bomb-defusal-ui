@@ -15,7 +15,7 @@ export const Route = createFileRoute("/game")({
       { property: "og:description", content: "Five minutes. Three strikes. Three modules." },
     ],
   }),
-  component: GameScreen;
+  component: GameScreen,
 });
 
 function GameScreen() {
