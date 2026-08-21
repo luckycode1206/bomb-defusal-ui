@@ -115,7 +115,7 @@ export function PasswordModule({ index }: { index: number }) {
     ["s", "t", "d", "n", "y"],
   ];
   const [pos, setPos] = useState([0, 0, 0, 0, 0]);
-  const word = pos.map((p, i) => columns[i][p]).join("");
+  const word = pos.map((p, i) => columns[i]?.[p] ?? "").join("");
   return (
     <ModuleShell name="Password" index={index} solved={word === "hunts"}>
       <div className="grid grid-cols-5 gap-2">
@@ -129,7 +129,7 @@ export function PasswordModule({ index }: { index: number }) {
               ▲
             </button>
             <span className="grid h-10 w-full place-items-center rounded-sm border border-border-strong bg-background font-mono text-lg uppercase text-signal">
-              {col[pos[i]]}
+              {col[pos[i] ?? 0]}
             </span>
             <button
               onClick={() => setPos((p) => p.map((v, j) => (j === i ? (v + 1) % col.length : v)))}
