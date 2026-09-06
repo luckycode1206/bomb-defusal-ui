@@ -1,3 +1,4 @@
+import { supabase } from '../utils/supabase'
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Brand } from "@/components/layout/AppShell";
 import { TacButton, Badge, Panel } from "@/components/ui/tactical";
@@ -45,6 +46,7 @@ const steps = [
 ];
 
 function Landing() {
+
   return (
     <div className="relative min-h-screen bg-background">
       <div className="pointer-events-none absolute inset-0 tactical-grid opacity-40" />

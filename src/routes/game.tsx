@@ -5,6 +5,7 @@ import { Badge, Panel, StatusDot, TacButton } from "@/components/ui/tactical";
 import { KeypadModule, PasswordModule, WiresModule } from "@/components/game/BombModules";
 import { mockTeam } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/utils/supabase";
 
 export const Route = createFileRoute("/game")({
   head: () => ({
@@ -19,15 +20,99 @@ export const Route = createFileRoute("/game")({
 });
 
 function GameScreen() {
-  const [seconds, setSeconds] = useState(287);
-  useEffect(() => {
-    const t = setInterval(() => setSeconds((s) => (s > 0 ? s - 1 : 0)), 1000);
-    return () => clearInterval(t);
-  }, []);
+  const [seconds, setSeconds] = useState(300);
+const [roomId, setRoomId] = useState<string | null>(null);
+const [gameSessionId, setGameSessionId] = useState<string | null>(null);
+const [strikes, setStrikes] = useState(0);
+const [gameStatus, setGameStatus] = useState("active");
+    useEffect(() => {
+  async function loadRoom() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return;
+
+    const { data: playerData, error: playerError } = await supabase
+      .from("room_players")
+      .select("room_id")
+      .eq("user_id", user.id)
+      .order("joined_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (playerError) {
+      console.error("Room lookup error:", playerError);
+      return;
+    }
+
+    if (!playerData?.room_id) {
+      console.error("No room found for player");
+      return;
+    }
+
+    console.log("Current game room:", playerData.room_id);
+    setRoomId(playerData.room_id);
+
+    const { data: roomData, error: roomError } = await supabase
+      .from("rooms")
+      .select("*")
+      .eq("id", playerData.room_id)
+      .single();
+
+    if (roomError) {
+      console.error("Game room fetch error:", roomError);
+      return;
+    }
+
+    console.log("Game room data:", roomData);
+  }
+
+  loadRoom();
+}, []);
+useEffect(() => {
+  if (!roomId) return;
+
+  async function loadGameStartTime() {
+    const { data, error } = await supabase
+      .from("rooms")
+      .select("game_started_at")
+      .eq("id", roomId)
+      .single();
+
+    if (error) {
+      console.error("Game start time error:", error);
+      return;
+    }
+
+    if (!data?.game_started_at) {
+      console.error("Game has not started yet.");
+      return;
+    }
+
+    const startTime = new Date(data.game_started_at).getTime();
+
+    const updateTimer = () => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const remaining = Math.max(300 - elapsed, 0);
+
+      setSeconds(remaining);
+    };
+
+    updateTimer();
+
+    const timer = setInterval(updateTimer, 1000);
+
+    return () => clearInterval(timer);
+  }
+
+  loadGameStartTime();
+}, [roomId]);
+  
   const mm = String(Math.floor(seconds / 60)).padStart(2, "0");
   const ss = String(seconds % 60).padStart(2, "0");
   const critical = seconds < 60;
-  const strikes = 1;
+  
 
   return (
     <AppShell status="Live" nav={false}>
@@ -107,7 +192,7 @@ function GameScreen() {
             <Link to="/results">
               <TacButton variant="success">Submit defusal</TacButton>
             </Link>
-            <Link to="/lobby">
+            <Link to="/lobby" search={{ mode: "create" }}>
               <TacButton variant="ghost">Abort</TacButton>
             </Link>
           </div>
